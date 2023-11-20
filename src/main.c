@@ -1,20 +1,15 @@
 #include "stm32g4xx_ll_rcc.h"
 #include "stm32g4xx_ll_bus.h"
-#include "stm32g4xx_ll_crs.h"
 #include "stm32g4xx_ll_system.h"
-#include "stm32g4xx_ll_exti.h"
 #include "stm32g4xx_ll_cortex.h"
 #include "stm32g4xx_ll_utils.h"
 #include "stm32g4xx_ll_pwr.h"
-#include "stm32g4xx_ll_dma.h"
-#include "stm32g4xx.h"
 #include "stm32g4xx_ll_gpio.h"
 #include "stm32g474xx.h"
-#include "stm32g4xx_ll_gpio.h"
 #include "FreeRTOS.h"
 #include "task.h"
-#include <stdbool.h>
 
+void Error_Handler(void) {}
 
 /**
   * @brief System Clock Configuration
@@ -45,7 +40,7 @@ void SystemClock_Config(void) {
     while (LL_RCC_GetSysClkSource() != LL_RCC_SYS_CLKSOURCE_STATUS_PLL) {
 
     }
-    /* Ensure 1s transition state at intermediate medium speed clock based on DWT */
+    /* Insure 1µs transition state at intermediate medium speed clock based on DWT */
     CoreDebug->DEMCR |= CoreDebug_DEMCR_TRCENA_Msk;
     DWT->CTRL |= DWT_CTRL_CYCCNTENA_Msk;
     DWT->CYCCNT = 0;
@@ -54,7 +49,6 @@ void SystemClock_Config(void) {
     LL_RCC_SetAHBPrescaler(LL_RCC_SYSCLK_DIV_1);
     LL_RCC_SetAPB1Prescaler(LL_RCC_APB1_DIV_1);
     LL_RCC_SetAPB2Prescaler(LL_RCC_APB1_DIV_1);
-
     LL_SetSystemCoreClock(170000000);
     LL_Init1msTick(170000000);
     LL_SYSTICK_EnableIT();
@@ -76,6 +70,9 @@ int main(void) {
     LL_APB1_GRP1_EnableClock(LL_APB1_GRP1_PERIPH_PWR);
     LL_PWR_DisableDeadBatteryPD();
     NVIC_SetPriorityGrouping(3);
+
+    SystemClock_Config();
+
     NVIC_SetPriority(PendSV_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(), 15, 0));
 
     LL_AHB2_GRP1_EnableClock(LL_AHB2_GRP1_PERIPH_GPIOB);
@@ -89,9 +86,8 @@ int main(void) {
 
     LL_GPIO_Init(GPIOB, &gpio_init);
 
-    SystemClock_Config();
 
-    xTaskCreate(heartbeat_task, "heartbeat", 100, NULL, 1, NULL);
-    xPortStartScheduler();
+    xTaskCreate(heartbeat_task, "heartbeat", 100, NULL, 2, NULL);
+    vTaskStartScheduler();
     while (1) {}
 }
